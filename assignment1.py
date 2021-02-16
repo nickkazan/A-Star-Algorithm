@@ -19,10 +19,14 @@ def pathfinding(input_filename, optimal_path_filename, explored_list_filename):
   # input_filename contains a CSV file with the input grid
   # optimal_path_filename is the name of the file the optimal path should be written to
   # explored_list_filename is the name of the file the list of explored nodes should be written to
-  (grid, start, goal) = parseInputData(input_filename)
+  (grid, start, goals) = parseInputData(input_filename)
   
   start_node = Node(start, None, 0, 0, 0, 0)
-  goal_node = Node(goal, None, 0, 0, 0, 0)
+  goal_list = []
+  for goal in goals:
+    goal_node = Node(goal, None, 0, 0, 0, 0)
+    goal_list.append(goal_node)
+
 
   opened = []
   closed = []
@@ -34,18 +38,29 @@ def pathfinding(input_filename, optimal_path_filename, explored_list_filename):
     cur_node = opened.pop(0)
     closed.append(cur_node)
     # check if we found our goal state
-    if cur_node == goal_node:
-      optimal_path = []
-      current = cur_node
-      while current:
-        optimal_path.append(current.position)
-        current = current.parent
-      optimal_path.reverse() # this is the optimal path to go from start to goal
-      print("Visited:")
-      for element in closed:
-        print(element.position)
-      print("Cost: ", cur_node.f)
-      return optimal_path
+    for goal in goal_list:
+      if cur_node == goal:
+        optimal_path = []
+        current = cur_node
+        while current:
+          optimal_path.append(current.position)
+          current = current.parent
+        optimal_path.reverse() # this is the optimal path to go from start to goal
+        print("Visited:")
+        for element in closed:
+          print(element.position)
+
+        # write to the 2 files and print the cost
+        with open(optimal_path_filename, 'w') as file:
+          for position in optimal_path:
+            file.write(str(position))
+            file.write('\n')
+        with open(explored_list_filename, 'w') as file:
+          for node in closed:
+            file.write(str(node.position))
+            file.write('\n')
+        return cur_node.f # this returns the optimal path cost
+
     child_nodes = []
     for direction in ALL_DIRECTIONS:
       if not (((cur_node.position[0] + direction[0]) >= len(grid) or (cur_node.position[0] + direction[0]) < 0)
@@ -70,7 +85,12 @@ def pathfinding(input_filename, optimal_path_filename, explored_list_filename):
         if closed_node == child:
           closed_flag = True
       if not closed_flag:
-        child.h = (abs(child.position[0] - goal_node.position[0]) + abs(child.position[1] - goal_node.position[1]))
+        distance_list = []
+        for goal in goal_list:
+          distance = (abs(child.position[0] - goal.position[0]) + abs(child.position[1] - goal.position[1]))
+          distance_list.append(distance)
+
+        child.h = min(distance_list)
         child.g = cur_node.g + child.cost
         child.f = child.g + child.h
         opened_flag = False
@@ -87,8 +107,7 @@ def pathfinding(input_filename, optimal_path_filename, explored_list_filename):
           if len(opened) == 0:
             opened.append(child)
     print('\n\n')
-  # return optimal_path_cost
-
+  return -1
 def parseInputData(input_filename):
   input_file = open(input_filename, 'r')
   lines = input_file.readlines()
@@ -102,14 +121,15 @@ def parseInputData(input_filename):
     result.append(row)
   
   start = None
-  goal = None
+  goals = []
   for a in range(len(result)):
     for b in range(len(result[a])):
       if result[a][b] == 'S':
         start = (a,b)
       elif result[a][b] == 'G':
-        goal = (a,b)
-  return (result, start, goal)
+        goals.append((a,b))
+  return (result, start, goals)
 
 
-print(pathfinding('./Example2/input.txt', './Example2/optimal_path.txt', './Example2/explored_list.txt'))
+optimal_path_cost = pathfinding('./Example1/input.txt', './optimal_path.txt', './explored_list.txt')
+print('The Optimal Path Cost is: {}'.format(optimal_path_cost))
